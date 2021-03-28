@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import PngChunk from './src/png-chunk';
 import SequentBufferReader from './src/helpers/sequent-buffer-reader';
 import {FILE_HEADER_BYTES_NUMBER, IHDR_CHUNK, PNG_HEADER} from './src/constants';
-import writePng from './src/utils/png-writer';
+import PngWriter from './src/utils/png-writer';
 import mergeUint8Arrays from './src/helpers/merge-uint8arrays';
 
 interface ImageInfo {
@@ -22,7 +22,7 @@ class PngReader {
     public imageInfo?: ImageInfo;
 
     // private imagePixels?: number[][] = [];
-    // private pixelsBuffer = new Uint8Array();
+    private pixelsBuffer = new Uint8Array();
 
     constructor(path: string) {
         this.fileBuffer = fs.readFileSync(path);
@@ -66,13 +66,13 @@ class PngReader {
                 break;
             }
             case 'IDAT': {
-                // this.pixelsBuffer = mergeUint8Arrays(this.pixelsBuffer, chunk.data);
+                this.pixelsBuffer = mergeUint8Arrays(this.pixelsBuffer, chunk.data);
                 break;
             }
             case 'IEND': {
                 // WIP
                 const pngHeader = this.fileBuffer.slice(0, FILE_HEADER_BYTES_NUMBER);
-                writePng('./assets/img__.png', this.chunks, pngHeader);
+                PngWriter.savePngWithMergedChunks('./assets/img__.png', this.chunks, pngHeader, this.pixelsBuffer);
                 break;
             }
         }
