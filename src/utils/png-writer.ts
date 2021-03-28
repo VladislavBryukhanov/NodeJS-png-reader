@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import {crc32} from 'crc';
 import {inflateSync, deflateSync} from 'zlib';
-import {FILE_HEADER_BYTES_NUMBER} from './constants';
-import PngChunk from './png-chunk';
+import {FILE_HEADER_BYTES_NUMBER} from '../constants';
+import PngChunk from '../png-chunk';
 
 // WIP
 export default (path: string, chunks: PngChunk[], imageBUffer: Buffer) => {

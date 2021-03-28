@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import PngChunk from './src/png-chunk';
 import SequentBufferReader from './src/helpers/sequent-buffer-reader';
 import {FILE_HEADER_BYTES_NUMBER, IHDR_CHUNK, PNG_HEADER} from './src/constants';
-import writePng from './src/write-png';
+import writePng from './src/utils/png-writer';
 
 interface ImageInfo {
     height: number;
@@ -70,6 +70,7 @@ class PngReader {
                 // this.pixelsBuffer.set(chunk.data, tmp.length);
             }
             case 'IEND': {
+                // WIP
                 writePng('./assets/img__.png', this.chunks, this.fileBuffer);
             }
         }
