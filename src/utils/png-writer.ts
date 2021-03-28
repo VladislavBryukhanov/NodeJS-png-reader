@@ -1,15 +1,11 @@
 import * as fs from 'fs';
 import {crc32} from 'crc';
 import {inflateSync, deflateSync} from 'zlib';
-import {FILE_HEADER_BYTES_NUMBER} from '../constants';
 import PngChunk from '../png-chunk';
+import mergeUint8Arrays from '../helpers/merge-uint8arrays';
 
 // WIP
-export default (path: string, chunks: PngChunk[], imageBUffer: Buffer) => {
-    const pngHeader = imageBUffer.slice(0, FILE_HEADER_BYTES_NUMBER);
-
-    let offset = FILE_HEADER_BYTES_NUMBER;
-
+export default (path: string, chunks: PngChunk[], pngHeader: Buffer) => {
     let imageBuff = new Uint8Array(pngHeader.byteLength);
     imageBuff.set(pngHeader, 0);
 
@@ -62,11 +58,7 @@ export default (path: string, chunks: PngChunk[], imageBUffer: Buffer) => {
                 chunkContent,
                 crcBuf
             ]);
-            const tmp = imageBuff;
-            imageBuff = new Uint8Array(tmp.byteLength + source.byteLength)
-            imageBuff.set(tmp);
-            imageBuff.set(source, offset);
-            offset += source.byteLength;
+            imageBuff = mergeUint8Arrays(imageBuff, source);
             
             return;
         }
@@ -83,11 +75,7 @@ export default (path: string, chunks: PngChunk[], imageBUffer: Buffer) => {
             chunk.crc
         ]);
 
-        const tmp = imageBuff;
-        imageBuff = new Uint8Array(tmp.byteLength + source.byteLength)
-        imageBuff.set(tmp);
-        imageBuff.set(source, offset);
-        offset += source.byteLength;
+        imageBuff = mergeUint8Arrays(imageBuff, source);
     });
 
     fs.writeFileSync(path, imageBuff);

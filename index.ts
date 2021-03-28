@@ -3,6 +3,7 @@ import PngChunk from './src/png-chunk';
 import SequentBufferReader from './src/helpers/sequent-buffer-reader';
 import {FILE_HEADER_BYTES_NUMBER, IHDR_CHUNK, PNG_HEADER} from './src/constants';
 import writePng from './src/utils/png-writer';
+import mergeUint8Arrays from './src/helpers/merge-uint8arrays';
 
 interface ImageInfo {
     height: number;
@@ -62,22 +63,23 @@ class PngReader {
                     filterMethod: bytes.slice(IHDR_CHUNK.FILTER_METHOD_BYTES_NUMBER),
                     interlaceMethod: bytes.slice(IHDR_CHUNK.INTERLACE_METHOD_BYTES_NUMBER),
                 }
+                break;
             }
             case 'IDAT': {
-                // const tmp = this.pixelsBuffer;
-                // this.pixelsBuffer = new Uint8Array(tmp.length + chunk.data.byteLength)
-                // this.pixelsBuffer.set(tmp);
-                // this.pixelsBuffer.set(chunk.data, tmp.length);
+                // this.pixelsBuffer = mergeUint8Arrays(this.pixelsBuffer, chunk.data);
+                break;
             }
             case 'IEND': {
                 // WIP
-                writePng('./assets/img__.png', this.chunks, this.fileBuffer);
+                const pngHeader = this.fileBuffer.slice(0, FILE_HEADER_BYTES_NUMBER);
+                writePng('./assets/img__.png', this.chunks, pngHeader);
+                break;
             }
         }
     }
 }
 
-const image = new PngReader('./assets/img.png');
+const image = new PngReader('./assets/hd.png');
 console.log(image.imageInfo);
 
 // console.log('\x1b[36m%s\x1b[0m', String.fromCharCode(9619));
