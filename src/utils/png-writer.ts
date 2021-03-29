@@ -34,19 +34,27 @@ export default class PngWriter {
         return crcBuf;
     }
 
+
+    private static buildChunk(chunkType, chunkData, deflate?: boolean) {
+        const chunkContent = this.buildChunkContentBytes(chunkType, chunkData, deflate );
+        return Buffer.concat([
+            this.buildChunkDataLengthBytes(chunkData),
+            chunkContent,
+            this.buildCrcBytes(chunkContent)
+        ]);
+    }
+
     // FIXME do not work for multiple chunks. unable to unzip each chunk, zlib exception
 
     // static savePng(path: string, chunks: PngChunk[], pngHeader: Buffer) {
-    //     let imageBuff = new Uint8Array(pngHeader.byteLength);
-    //     imageBuff.set(pngHeader, 0);
+    //     let imageBuff = new Uint8Array(pngHeader);
     
     //     chunks.forEach(chunk => {
     //         if (chunk.type === 'IDAT') {
-    //             let position = 0;
     //             const data = inflateSync(chunk.data);
     //             let mutatedData = new Uint8Array();
     
-    //             while(data.byteLength > position) {
+    //             for(let position = 0; data.byteLength > position; position += 4) {
     //                 // if (chunk.data.slice(4)[0] === 0) {
     //                 // }
                     
@@ -66,86 +74,52 @@ export default class PngWriter {
     //                 );
     
     //                 mutatedData = mergeUint8Arrays(imageBuff, payload);
-    
-    //                 position += 4;
     //             }
     
-    //             const chunkContent = this.buildChunkContentBytes(chunk.type, mutatedData)
-
-    //             const source = Buffer.concat([
-    //                 this.buildChunkDataLengthBytes(mutatedData),
-    //                 chunkContent,
-    //                 this.buildCrcBytes(chunkContent)
-    //             ]);
-    //             imageBuff = mergeUint8Arrays(imageBuff, source);
-                
-    //             return;
+    //             return imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk('IDAT', mutatedData, true));
     //         }
     
-    //         const source = Buffer.concat([
-    //             this.buildChunkDataLengthBytes(chunk.data),
-    //             this.buildChunkContentBytes(chunk.type, chunk.data),
-    //             chunk.crc
-    //         ]);
-    
-    //         imageBuff = mergeUint8Arrays(imageBuff, source);
+    //         imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk(chunk.type, chunk.data));
     //     });
     
     //     fs.writeFileSync(path, imageBuff);
     // }
     
-    static savePngWithMergedChunks(path: string, chunks: PngChunk[], pngHeader: Buffer, idatPayload) {
-        let imageBuff = new Uint8Array(pngHeader.byteLength);
-        imageBuff.set(pngHeader, 0);
+    static savePngWithMergedChunks(path: string, chunks: PngChunk[], pngHeader: Buffer, idatPayload: Uint8Array) {
+        let imageBuff = new Uint8Array(pngHeader);
     
         chunks.forEach(chunk => {
             if (chunk.type === 'IEND') {
-                let position = 0;
-                let mutatedData = new Uint8Array();
                 const data = inflateSync(idatPayload);
+                let mutatedData = new Uint8Array();
     
-                while(data.byteLength > position) {
+                for(let position = 0; data.byteLength > position; position += 4) {
                     // if (chunk.data.slice(4)[0] === 0) {
                     // }
                     
                     // const payload = Buffer.from(data.slice(position, position + 4));
     
-                    const b = data.slice(position, position + 4);
+                    const bytes = data.slice(position, position + 4);
                     const payload = Buffer.from(
-                        b.map((ch: any, i) => {
-                            // if (i === 3 || i === 1) {
+                        bytes.map((ch: any, i) => {
+                            // if ( i === 1) {
                             //     return 255;
                             //     // return Math.floor(parseInt(ch) / 2)
                             // }
     
                             return ch;
-                            // return Math.floor(parseInt(ch) / 2)
+                            // return Math.floor(parseInt(ch) / 2);
                         })
                     );
     
-                    mutatedData = mergeUint8Arrays(imageBuff, payload);
-                    position += 4;
+                    mutatedData = mergeUint8Arrays(mutatedData, payload);
                 }
-    
-                const chunkContent = this.buildChunkContentBytes(chunk.type, mutatedData, true);
-
-                const source = Buffer.concat([
-                    this.buildChunkDataLengthBytes(mutatedData, true),
-                    chunkContent,
-                    this.buildCrcBytes(chunkContent)
-                ]);
-                imageBuff = mergeUint8Arrays(imageBuff, source);
+                return imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk('IDAT', mutatedData, true));
             }
     
-
-
-            const source = Buffer.concat([
-                this.buildChunkDataLengthBytes(chunk.data),
-                this.buildChunkContentBytes(chunk.type, chunk.data),
-                chunk.crc
-            ]);
-    
-            imageBuff = mergeUint8Arrays(imageBuff, source);
+            if (chunk.type !== 'IDAT') {
+                imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk(chunk.type, chunk.data));
+            }
         });
     
         fs.writeFileSync(path, imageBuff);

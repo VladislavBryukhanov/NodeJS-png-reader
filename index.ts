@@ -43,8 +43,8 @@ class PngReader {
             const bytes = this.fileBuffer.slice(offset);
             const chunk = new PngChunk(bytes);
     
-            this.processChunk(chunk);
             this.chunks.push(chunk);
+            this.processChunk(chunk);
 
             offset += chunk.totalChunkLength;
         }
