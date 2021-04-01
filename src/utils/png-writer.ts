@@ -3,7 +3,9 @@ import {crc32} from 'crc';
 import {inflateSync, deflateSync} from 'zlib';
 import PngChunk from '../png-chunk';
 import mergeUint8Arrays from '../helpers/merge-uint8arrays';
-import {CHUNK_HEADER} from '../constants';
+import {CHUNK_HEADER, MIN_IDAT_CHUNK_LENGTH} from '../constants';
+import {ImageInfo, PngChunkTypes} from '../types';
+import processDataBytesAsync from './process-data-bytes-async';
 
 // WIP
 export default class PngWriter {
@@ -17,7 +19,7 @@ export default class PngWriter {
         return lengthBuf;
     }
 
-    private static buildChunkContentBytes(type: string, chunkData: Uint8Array | Buffer, deflate?: boolean) {
+    private static buildChunkDataBytes(type: string, chunkData: Uint8Array | Buffer, deflate?: boolean) {
         const data = deflate 
             ? deflateSync(chunkData)
             : chunkData;
@@ -34,9 +36,8 @@ export default class PngWriter {
         return crcBuf;
     }
 
-
-    private static buildChunk(chunkType, chunkData, deflate?: boolean) {
-        const chunkContent = this.buildChunkContentBytes(chunkType, chunkData, deflate );
+    private static buildChunk(chunkType: PngChunkTypes, chunkData: Uint8Array, deflate?: boolean) {
+        const chunkContent = this.buildChunkDataBytes(chunkType, chunkData, deflate );
         return Buffer.concat([
             this.buildChunkDataLengthBytes(chunkData),
             chunkContent,
@@ -44,83 +45,52 @@ export default class PngWriter {
         ]);
     }
 
-    // FIXME do not work for multiple chunks. unable to unzip each chunk, zlib exception
+    private static splitIdatToChunks(idat: Uint8Array) {
+        const compressedIdat = deflateSync(idat);
 
-    // static savePng(path: string, chunks: PngChunk[], pngHeader: Buffer) {
-    //     let imageBuff = new Uint8Array(pngHeader);
-    
-    //     chunks.forEach(chunk => {
-    //         if (chunk.type === 'IDAT') {
-    //             const data = inflateSync(chunk.data);
-    //             let mutatedData = new Uint8Array();
-    
-    //             for(let position = 0; data.byteLength > position; position += 4) {
-    //                 // if (chunk.data.slice(4)[0] === 0) {
-    //                 // }
-                    
-    //                 // const payload = Buffer.from(data.slice(position, position + 4));
-    
-    //                 const b = data.slice(position, position + 4);
-    //                 const payload = Buffer.from(
-    //                     b.map((ch: any, i) => {
-    //                         // if (i === 3 || i === 1) {
-    //                         //     return 255;
-    //                         //     // return Math.floor(parseInt(ch) / 2)
-    //                         // }
-    
-    //                         return ch;
-    //                         // return Math.floor(parseInt(ch) / 2)
-    //                     })
-    //                 );
-    
-    //                 mutatedData = mergeUint8Arrays(imageBuff, payload);
-    //             }
-    
-    //             return imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk('IDAT', mutatedData, true));
-    //         }
-    
-    //         imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk(chunk.type, chunk.data));
-    //     });
-    
-    //     fs.writeFileSync(path, imageBuff);
-    // }
-    
-    static savePngWithMergedChunks(path: string, chunks: PngChunk[], pngHeader: Buffer, idatPayload: Uint8Array) {
+        const AVG_IDAT_CHUNKS_NUMBER = 60;
+        const chunkLength = compressedIdat.byteLength / AVG_IDAT_CHUNKS_NUMBER;
+        const chunks = [];
+
+        for (let position = 0; position < compressedIdat.byteLength; position += chunkLength) {
+            const data = compressedIdat.slice(position, position + chunkLength);
+            chunks.push(new Uint8Array(data));
+        }
+
+        return chunks;
+    }
+
+    static async savePngWithMergedChunks(
+        path: string, 
+        pngHeader: Buffer, 
+        imageInfo: ImageInfo, 
+        chunks: PngChunk[], 
+        idatPayload: Uint8Array
+    ) {
         let imageBuff = new Uint8Array(pngHeader);
     
-        chunks.forEach(chunk => {
+        for (let chunk of chunks){
             if (chunk.type === 'IEND') {
                 const data = inflateSync(idatPayload);
-                let mutatedData = new Uint8Array();
-    
-                for(let position = 0; data.byteLength > position; position += 4) {
-                    // if (chunk.data.slice(4)[0] === 0) {
-                    // }
-                    
-                    // const payload = Buffer.from(data.slice(position, position + 4));
-    
-                    const bytes = data.slice(position, position + 4);
-                    const payload = Buffer.from(
-                        bytes.map((ch: any, i) => {
-                            // if ( i === 1) {
-                            //     return 255;
-                            //     // return Math.floor(parseInt(ch) / 2)
-                            // }
-    
-                            return ch;
-                            // return Math.floor(parseInt(ch) / 2);
-                        })
-                    );
-    
-                    mutatedData = mergeUint8Arrays(mutatedData, payload);
+
+                const scanLineLength = imageInfo.width * 4 + 1;
+                const content = await processDataBytesAsync(data, scanLineLength);
+
+                if (content.byteLength < MIN_IDAT_CHUNK_LENGTH) {
+                    imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk('IDAT', content, true));
+                    continue;
                 }
-                return imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk('IDAT', mutatedData, true));
+
+                const chankedIdat = this.splitIdatToChunks(content);
+                chankedIdat.forEach((bytes: Uint8Array) => {
+                    imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk('IDAT', bytes));
+                });
             }
     
             if (chunk.type !== 'IDAT') {
                 imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk(chunk.type, chunk.data));
             }
-        });
+        };
     
         fs.writeFileSync(path, imageBuff);
     }

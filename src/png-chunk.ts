@@ -1,7 +1,6 @@
 import {CHUNK_HEADER} from './constants';
 import SequentBufferReader from './helpers/sequent-buffer-reader';
-
-export type PngChunkTypes = 'IHDR' | 'PLTE' | 'IDAT' | 'IEND';
+import {PngChunkTypes} from './types';
 
 export default class PngChunk {
     totalChunkLength: number;

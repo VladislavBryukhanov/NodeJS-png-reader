@@ -4,16 +4,7 @@ import SequentBufferReader from './src/helpers/sequent-buffer-reader';
 import {FILE_HEADER_BYTES_NUMBER, IHDR_CHUNK, PNG_HEADER} from './src/constants';
 import PngWriter from './src/utils/png-writer';
 import mergeUint8Arrays from './src/helpers/merge-uint8arrays';
-
-interface ImageInfo {
-    height: number;
-    width: number;
-    bitDepth: Buffer;
-    colorType: Buffer;
-    compressionMethod: Buffer;
-    filterMethod: Buffer;
-    interlaceMethod: Buffer;
-}
+import {ImageInfo} from './src/types';
 
 class PngReader {
     private fileBuffer: Buffer;
@@ -72,14 +63,14 @@ class PngReader {
             case 'IEND': {
                 // WIP
                 const pngHeader = this.fileBuffer.slice(0, FILE_HEADER_BYTES_NUMBER);
-                PngWriter.savePngWithMergedChunks('./assets/img__.png', this.chunks, pngHeader, this.pixelsBuffer);
+                PngWriter.savePngWithMergedChunks('./assets/img__.png', pngHeader, this.imageInfo, this.chunks, this.pixelsBuffer);
                 break;
             }
         }
     }
 }
 
-const image = new PngReader('./assets/hd.png');
+const image = new PngReader('./assets/img.png');
 console.log(image.imageInfo);
 
 // console.log('\x1b[36m%s\x1b[0m', String.fromCharCode(9619));

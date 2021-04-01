@@ -1,6 +1,8 @@
 export const PNG_HEADER = '89504e470d0a1a0a';
 export const FILE_HEADER_BYTES_NUMBER = 8;
 
+export const MIN_IDAT_CHUNK_LENGTH = 16 * 1024;
+
 export enum IHDR_CHUNK {
     WIDTH_BYTES_NUMBER = 4,
     HEIGHT_BYTES_NUMBER = 4,
