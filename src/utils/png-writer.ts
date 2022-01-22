@@ -7,7 +7,6 @@ import {CHUNK_HEADER, MIN_IDAT_CHUNK_LENGTH} from '../constants';
 import {ImageInfo, PngChunkTypes} from '../types';
 import processDataBytesAsync from './process-data-bytes-async';
 
-// WIP
 export default class PngWriter {
     private static buildChunkDataLengthBytes(chunkData: Uint8Array | Buffer, deflate?: boolean) {
         const data = deflate 
@@ -69,7 +68,7 @@ export default class PngWriter {
     ) {
         let imageBuff = new Uint8Array(pngHeader);
     
-        for (let chunk of chunks){
+        for (let chunk of chunks) {
             if (chunk.type === 'IEND') {
                 const data = inflateSync(idatPayload);
 
@@ -81,9 +80,10 @@ export default class PngWriter {
                     continue;
                 }
 
-                const chankedIdat = this.splitIdatToChunks(content);
-                chankedIdat.forEach((bytes: Uint8Array) => {
-                    imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk('IDAT', bytes));
+                const chunkedIdat = this.splitIdatToChunks(content);
+
+                chunkedIdat.forEach((bytes: Uint8Array) => {
+                    imageBuff = mergeUint8Arrays(imageBuff, this.buildChunk('IDAT', bytes)); // deflate me
                 });
             }
     

@@ -12,7 +12,6 @@ class PngReader {
 
     public imageInfo?: ImageInfo;
 
-    // private imagePixels?: number[][] = [];
     private pixelsBuffer = new Uint8Array();
 
     constructor(path: string) {
@@ -46,14 +45,22 @@ class PngReader {
             case 'IHDR': {
                 const bytes = SequentBufferReader.from(chunk.data);
                 this.imageInfo = {
-                    height: bytes.readUIntBE(IHDR_CHUNK.HEIGHT_BYTES_NUMBER),
                     width: bytes.readUIntBE(IHDR_CHUNK.WIDTH_BYTES_NUMBER),
-                    bitDepth: bytes.slice(IHDR_CHUNK.BIT_DEPTH_BYTES_NUMBER),
-                    colorType: bytes.slice(IHDR_CHUNK.COLOR_TYPE_BYTES_NUMBER),
-                    compressionMethod: bytes.slice(IHDR_CHUNK.COMPRESSION_METHOD_BYTES_NUMBER),
-                    filterMethod: bytes.slice(IHDR_CHUNK.FILTER_METHOD_BYTES_NUMBER),
-                    interlaceMethod: bytes.slice(IHDR_CHUNK.INTERLACE_METHOD_BYTES_NUMBER),
+                    height: bytes.readUIntBE(IHDR_CHUNK.HEIGHT_BYTES_NUMBER),
+                    bitDepth: bytes.readUIntBE(IHDR_CHUNK.BIT_DEPTH_BYTES_NUMBER),
+                    colorType: bytes.readUIntBE(IHDR_CHUNK.COLOR_TYPE_BYTES_NUMBER),
+                    compressionMethod: bytes.readUIntBE(IHDR_CHUNK.COMPRESSION_METHOD_BYTES_NUMBER),
+                    filterMethod: bytes.readUIntBE(IHDR_CHUNK.FILTER_METHOD_BYTES_NUMBER),
+                    interlaceMethod: bytes.readUIntBE(IHDR_CHUNK.INTERLACE_METHOD_BYTES_NUMBER),
+                };
+
+                if (this.imageInfo.colorType != 6) {
+                    console.warn(
+                        '\x1b[36m%s\x1b[0m', 
+                        "___WARNING___\n color type is not RGBA, transformer would not work"
+                    );
                 }
+
                 break;
             }
             case 'IDAT': {
